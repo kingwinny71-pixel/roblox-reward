@@ -1,0 +1,6 @@
+{
+  "name": "Roblox Robux Earning Station",
+  "description": "A web application where Roblox players enter their Roblox username, watch ads to earn coins, and exchange their coins for Robux. Includes an admin dashboard to easily view and send payouts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,173 @@
+{
+  "entities": {
+    "User": {
+      "title": "Player Profile",
+      "description": "Represents an authenticated Google user linked to a Roblox account earning coins",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique Google Auth user ID"
+        },
+        "email": {
+          "type": "string",
+          "description": "The Google account email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The Google display name"
+        },
+        "robloxUsername": {
+          "type": "string",
+          "description": "The linked Roblox username"
+        },
+        "coins": {
+          "type": "number",
+          "description": "Current coin balance"
+        },
+        "totalEarned": {
+          "type": "number",
+          "description": "Total coins earned"
+        },
+        "totalAds": {
+          "type": "number",
+          "description": "Total ads watched"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        },
+        "lastAdWatchedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of last ad viewed"
+        }
+      },
+      "required": [
+        "uid",
+        "email",
+        "displayName",
+        "robloxUsername",
+        "coins",
+        "totalEarned",
+        "totalAds",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdView": {
+      "title": "Ad View Log",
+      "description": "Log of a watched ad by a player",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The Google Auth UID who watched the ad"
+        },
+        "robloxUsername": {
+          "type": "string",
+          "description": "Roblox username who watched the ad"
+        },
+        "earnedCoins": {
+          "type": "number",
+          "description": "Coins rewarded (normally 10)"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the ad was watched"
+        },
+        "adType": {
+          "type": "string",
+          "description": "Type of simulated ad watched"
+        }
+      },
+      "required": [
+        "uid",
+        "robloxUsername",
+        "earnedCoins",
+        "timestamp",
+        "adType"
+      ]
+    },
+    "Redemption": {
+      "title": "Robux Redemption Request",
+      "description": "A player's request to exchange coins for Robux",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique request ID"
+        },
+        "uid": {
+          "type": "string",
+          "description": "The Google Auth UID of the player"
+        },
+        "robloxUsername": {
+          "type": "string",
+          "description": "Roblox username to receive Robux"
+        },
+        "coinsSpent": {
+          "type": "number",
+          "description": "Number of coins exchanged"
+        },
+        "robuxAmount": {
+          "type": "number",
+          "description": "Amount of Robux to receive"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "completed",
+            "cancelled"
+          ],
+          "description": "Current status of redemption"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the request was filed"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the request was completed"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Admin notes or payout details"
+        }
+      },
+      "required": [
+        "id",
+        "uid",
+        "robloxUsername",
+        "coinsSpent",
+        "robuxAmount",
+        "status",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of player profiles keyed by Google User ID"
+    },
+    "/adviews/{adviewId}": {
+      "schema": "AdView",
+      "description": "Log of all viewed ads for auditing"
+    },
+    "/redemptions/{redemptionId}": {
+      "schema": "Redemption",
+      "description": "Requests to redeem coins for Robux"
+    }
+  }
+}

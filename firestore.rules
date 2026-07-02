@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global safety net - default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper: Is Admin? Checks if Google authenticated and email is kingwinny71@gmail.com
+    function isAdmin() {
+      return request.auth != null && 
+             request.auth.token.email == "kingwinny71@gmail.com";
+    }
+
+    // Helper: Validate ID
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-+]+$');
+    }
+
+    // Helper: Get incoming data
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Helper: Get existing data
+    function existing() {
+      return resource.data;
+    }
+
+    // Match users collection (keyed by Google auth uid)
+    match /users/{userId} {
+      allow get: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin(); // Only admin can list all users
+
+      // Create a user profile
+      allow create: if request.auth != null && 
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       incoming().uid == userId &&
+                       incoming().email == request.auth.token.email &&
+                       incoming().displayName is string &&
+                       incoming().robloxUsername is string &&
+                       incoming().coins == 0 &&
+                       incoming().totalEarned == 0 &&
+                       incoming().totalAds == 0 &&
+                       incoming().createdAt == request.time &&
+                       incoming().updatedAt == request.time;
+
+      // Update a user profile:
+      // Case 1: Admin can update anything (e.g. adjust balance)
+      // Case 2: Player updating themselves
+      allow update: if isAdmin() || (
+        request.auth != null &&
+        request.auth.uid == userId &&
+        incoming().uid == userId &&
+        incoming().email == existing().email &&
+        incoming().displayName == existing().displayName &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action: Link Roblox account (initial or change)
+          (incoming().robloxUsername is string &&
+           incoming().robloxUsername.size() <= 100 &&
+           incoming().coins == existing().coins &&
+           incoming().totalEarned == existing().totalEarned &&
+           incoming().totalAds == existing().totalAds &&
+           incoming().diff(existing()).affectedKeys().hasOnly(['robloxUsername', 'updatedAt'])) ||
+
+          // Action: Watch Ad (gain 10-30 coins, total ads +1, track daily ads watched limit <= 15)
+          (incoming().robloxUsername == existing().robloxUsername &&
+           incoming().coins >= existing().coins + 10 &&
+           incoming().coins <= existing().coins + 30 &&
+           incoming().totalEarned == existing().totalEarned + (incoming().coins - existing().coins) &&
+           incoming().totalAds == existing().totalAds + 1 &&
+           incoming().lastAdWatchedAt == request.time &&
+           (!('dailyAdsCount' in incoming()) || (incoming().dailyAdsCount is number && incoming().dailyAdsCount <= 15)) &&
+           incoming().diff(existing()).affectedKeys().hasOnly(['coins', 'totalEarned', 'totalAds', 'lastAdWatchedAt', 'updatedAt', 'dailyAdsCount', 'lastAdDate'])) ||
+          
+          // Action: Redeem Robux (spend coins)
+          (incoming().robloxUsername == existing().robloxUsername &&
+           incoming().coins < existing().coins &&
+           incoming().coins >= 0 &&
+           incoming().totalEarned == existing().totalEarned &&
+           incoming().totalAds == existing().totalAds &&
+           incoming().diff(existing()).affectedKeys().hasOnly(['coins', 'updatedAt']))
+        )
+      );
+    }
+
+    // Match adviews collection
+    match /adviews/{adviewId} {
+      allow read: if isAdmin();
+      allow list: if isAdmin();
+      
+      allow create: if request.auth != null &&
+                       isValidId(adviewId) &&
+                       incoming().uid == request.auth.uid &&
+                       incoming().robloxUsername is string &&
+                       incoming().earnedCoins >= 10 &&
+                       incoming().earnedCoins <= 30 &&
+                       incoming().timestamp == request.time &&
+                       incoming().adType is string &&
+                       incoming().adType.size() <= 50;
+    }
+
+    // Match redemptions collection
+    match /redemptions/{redemptionId} {
+      allow get: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
+      allow list: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      
+      allow create: if request.auth != null &&
+                       isValidId(redemptionId) &&
+                       incoming().id == redemptionId &&
+                       incoming().uid == request.auth.uid &&
+                       incoming().robloxUsername is string &&
+                       incoming().coinsSpent is number &&
+                       incoming().coinsSpent > 0 &&
+                       incoming().robuxAmount is number &&
+                       incoming().robuxAmount > 0 &&
+                       incoming().status == "pending" &&
+                       incoming().createdAt == request.time;
+                        
+      allow update, delete: if isAdmin();
+    }
+  }
+}
